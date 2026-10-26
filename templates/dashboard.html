@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wearpack Recognition</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f3f4f6;
+        color: #111827;
+      }
+      header {
+        background: #111827;
+        color: white;
+        padding: 20px 30px;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 22px;
+      }
+      header p {
+        margin: 5px 0 0;
+        opacity: 0.7;
+        font-size: 13px;
+      }
+      main {
+        padding: 24px;
+      }
+
+      .live-card,
+      .stats,
+      .card {
+        background: white;
+        border-radius: 14px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+      }
+
+      .live-card {
+        margin-bottom: 20px;
+        overflow: hidden;
+      }
+      .live-header {
+        height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .live-title {
+        font-weight: 700;
+      }
+      .live-subtitle {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 2px;
+      }
+      .live-actions {
+        display: flex;
+        gap: 8px;
+      }
+      .live-actions button {
+        width: 36px;
+        height: 34px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: white;
+        cursor: pointer;
+        font-size: 17px;
+      }
+      .live-actions button:hover {
+        background: #f3f4f6;
+      }
+      .live-body {
+        background: #05070a;
+        min-height: 300px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+      .live-body img {
+        display: block;
+        width: 100%;
+        max-height: 70vh;
+        object-fit: contain;
+        background: #05070a;
+      }
+      .live-card.minimized .live-body {
+        display: none;
+      }
+      .live-card:fullscreen {
+        background: #05070a;
+        border-radius: 0;
+      }
+      .live-card:fullscreen .live-header {
+        background: #111827;
+        color: white;
+        border-bottom-color: #374151;
+      }
+      .live-card:fullscreen .live-subtitle {
+        color: #d1d5db;
+      }
+      .live-card:fullscreen .live-body {
+        height: calc(100vh - 52px);
+      }
+      .live-card:fullscreen .live-body img {
+        width: 100%;
+        height: 100%;
+        max-height: none;
+        object-fit: contain;
+      }
+
+      .stats {
+        display: flex;
+        gap: 28px;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+      .stat strong {
+        display: block;
+        font-size: 22px;
+      }
+      .stat span {
+        color: #6b7280;
+        font-size: 12px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 18px;
+      }
+      .card {
+        overflow: hidden;
+      }
+      .image-container {
+        background: #111;
+        height: 290px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .image-container img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+      .card-content {
+        padding: 15px;
+      }
+      .name {
+        font-size: 20px;
+        font-weight: 750;
+      }
+      .ocr-main {
+        margin-top: 3px;
+        font-size: 15px;
+        font-weight: 650;
+      }
+      .raw-ocr {
+        margin-top: 3px;
+        color: #6b7280;
+        font-size: 12px;
+        overflow-wrap: anywhere;
+      }
+      .metadata {
+        margin-top: 12px;
+        font-size: 12px;
+        color: #6b7280;
+        line-height: 1.7;
+      }
+      .badge {
+        display: inline-block;
+        margin-top: 10px;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 650;
+      }
+      .recognized {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .unrecognized {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      .pending,
+      .processing {
+        background: #fef3c7;
+        color: #92400e;
+      }
+      .no_ocr {
+        background: #e5e7eb;
+        color: #374151;
+      }
+      .error {
+        background: #fca5a5;
+        color: #7f1d1d;
+      }
+
+      @media (max-width: 700px) {
+        main {
+          padding: 12px;
+        }
+        header {
+          padding: 16px;
+        }
+        .image-container {
+          height: 240px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Wearpack Recognition</h1>
+      <p>Live detection, OCR overlay, and capture log</p>
+    </header>
+
+    <main>
+      <section id="liveCard" class="live-card">
+        <div class="live-header">
+          <div>
+            <div class="live-title">Live View</div>
+            <div class="live-subtitle">
+              YOLO + ByteTrack + OCR result by Track ID
+            </div>
+          </div>
+          <div class="live-actions">
+            <button id="minimizeBtn" title="Minimize">−</button>
+            <button id="fullscreenBtn" title="Maximize / Fullscreen">⛶</button>
+          </div>
+        </div>
+        <div class="live-body">
+          <img
+            id="liveStream"
+            src="{{ url_for('video_feed') }}"
+            alt="Live stream"
+          />
+        </div>
+      </section>
+
+      <section class="stats">
+        <div class="stat">
+          <strong id="total">0</strong><span>Captures</span>
+        </div>
+        <div class="stat">
+          <strong id="recognized">0</strong><span>Recognized</span>
+        </div>
+        <div class="stat">
+          <strong id="unrecognized">0</strong><span>Unrecognized</span>
+        </div>
+        <div class="stat">
+          <strong id="pending">0</strong><span>Pending</span>
+        </div>
+        <div class="stat"><strong id="noOcr">0</strong><span>No OCR</span></div>
+      </section>
+
+      <section id="grid" class="grid"></section>
+    </main>
+
+    <script>
+      const liveCard = document.getElementById("liveCard");
+      const liveStream = document.getElementById("liveStream");
+      const minimizeBtn = document.getElementById("minimizeBtn");
+      const fullscreenBtn = document.getElementById("fullscreenBtn");
+
+      function liveUrl() {
+        return `${window.location.protocol}//${window.location.hostname}:5002/stream`;
+      }
+
+      function startLive() {
+        if (!liveStream.src) {
+          liveStream.src = liveUrl();
+        }
+      }
+
+      function stopLive() {
+        liveStream.removeAttribute("src");
+      }
+
+      minimizeBtn.addEventListener("click", () => {
+        const nowMinimized = liveCard.classList.toggle("minimized");
+        minimizeBtn.textContent = nowMinimized ? "+" : "−";
+        minimizeBtn.title = nowMinimized ? "Restore" : "Minimize";
+
+        // Saat minimize, hentikan MJPEG supaya browser tidak terus menerima frame.
+        if (nowMinimized) {
+          stopLive();
+        } else {
+          startLive();
+        }
+      });
+
+      fullscreenBtn.addEventListener("click", async () => {
+        try {
+          if (!document.fullscreenElement) {
+            await liveCard.requestFullscreen();
+          } else {
+            await document.exitFullscreen();
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      });
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function fmtConfidence(value) {
+        if (value === null || value === undefined) return "-";
+        return `${(Number(value) * 100).toFixed(1)}%`;
+      }
+
+      async function loadStats() {
+        try {
+          const response = await fetch("/api/stats", { cache: "no-store" });
+          const data = await response.json();
+          document.getElementById("total").textContent = data.total ?? 0;
+          document.getElementById("recognized").textContent =
+            data.recognized ?? 0;
+          document.getElementById("unrecognized").textContent =
+            data.unrecognized ?? 0;
+          document.getElementById("pending").textContent =
+            (data.pending ?? 0) + (data.processing ?? 0);
+          document.getElementById("noOcr").textContent = data.no_ocr ?? 0;
+        } catch (err) {
+          console.error("stats", err);
+        }
+      }
+
+      async function loadCaptures() {
+        try {
+          const response = await fetch("/api/captures", { cache: "no-store" });
+          const data = await response.json();
+          const grid = document.getElementById("grid");
+          grid.innerHTML = "";
+
+          for (const item of data) {
+            const status = item.status || "pending";
+            let name = "PENDING";
+            if (status === "recognized")
+              name = item.person_name || "RECOGNIZED";
+            else if (status === "unrecognized") name = "UNRECOGNIZED";
+            else if (status === "no_ocr") name = "NO OCR";
+            else if (status === "error") name = "ERROR";
+
+            const ocrText = item.ocr_text || "-";
+            const rawText = item.ocr_raw_text || "-";
+            const matchedCode = item.matched_code || "-";
+
+            const card = document.createElement("article");
+            card.className = "card";
+            card.innerHTML = `
+                <div class="image-container">
+                    <img src="/captures/${encodeURIComponent(item.filename)}" alt="capture">
+                </div>
+                <div class="card-content">
+                    <div class="name">${escapeHtml(name)}</div>
+                    <div class="ocr-main">OCR: ${escapeHtml(ocrText)}</div>
+                    <div class="raw-ocr">Raw: ${escapeHtml(rawText)}</div>
+                    <div class="metadata">
+                        Matched code: ${escapeHtml(matchedCode)}<br>
+                        Camera: ${escapeHtml(item.camera)}<br>
+                        Track: ${escapeHtml(item.track_id)}<br>
+                        Time: ${escapeHtml(item.timestamp)}<br>
+                        Sharpness: ${item.sharpness !== null ? Number(item.sharpness).toFixed(1) : "-"}<br>
+                        OCR confidence: ${fmtConfidence(item.ocr_confidence)}
+                    </div>
+                    <span class="badge ${escapeHtml(status)}">${escapeHtml(status)}</span>
+                </div>
+            `;
+            grid.appendChild(card);
+          }
+        } catch (err) {
+          console.error("captures", err);
+        }
+      }
+
+      startLive();
+      loadStats();
+      loadCaptures();
+      setInterval(loadStats, 2000);
+      setInterval(loadCaptures, 2000);
+    </script>
+  </body>
+</html>

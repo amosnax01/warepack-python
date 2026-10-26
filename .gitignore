@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+
+venv/
+.venv/
+paddle-env/
+wearpack-env/
+
+debug_ocr/
+runtime/
+spool/
